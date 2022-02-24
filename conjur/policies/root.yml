@@ -1,0 +1,14 @@
+- !policy
+  id: root
+  body:
+  - !host ansible-master
+
+  - &variables
+    - !variable ansible-target1/pass
+    - !variable ansible-target2/pass
+    - !variable ansible-target3/pass
+
+  - !permit
+    role: !host ansible-master
+    resource: *variables
+    privileges: [ read, execute ]

@@ -1,0 +1,15 @@
+- hosts: all
+  gather_facts: false
+  collections:
+    - cyberark.conjur
+
+  vars:
+      ansible_ssh_pass: "{{ lookup('cyberark.conjur.conjur_variable', 'root/' + inventory_hostname + '/pass') }}"
+
+  tasks:
+    - name: Test connection
+      ping:
+
+    - name: Show password used
+      debug: 
+        var: ansible_ssh_pass

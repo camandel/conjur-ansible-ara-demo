@@ -1,0 +1,146 @@
+version: '3'
+
+services:
+
+  conjur-database:
+    image: postgres:14-alpine
+    container_name: conjur-database
+    volumes:
+      - conjur-database-vol:/var/lib/postgresql/data
+    networks:
+      - conjur-be
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+  conjur-server:
+    image: cyberark/conjur:1.17.2-2330
+    container_name: conjur-server
+    command: server
+    environment:
+      DATABASE_URL: postgres://postgres@conjur-database/postgres
+      # (main encryption key, base64 encoded)
+      CONJUR_DATA_KEY: DUCB31VLYBbn7DcCGH5e1odp5kdOoKf3iLFSfweO8pE=
+      CONJUR_AUTHENTICATORS:
+    networks:
+      - conjur-fe
+      - conjur-be
+    depends_on:
+      - conjur-database
+
+  conjur-proxy:
+    image: nginx:1.20-alpine
+    container_name: conjur-proxy
+    volumes:
+      - ./conjur/nginx/:/etc/nginx/conf.d/:ro
+      - ./certs/servers/:/etc/nginx/tls/:ro
+    networks:
+      - backend
+      - conjur-fe
+    depends_on:
+      - conjur-server
+
+  conjur-client:
+    image: cyberark/conjur-cli:5
+    container_name: conjur-client
+    networks:
+      - backend
+    depends_on:
+      - conjur-proxy
+    volumes:
+      - ./conjur/client/.conjurrc:/root/.conjurrc:ro
+      - ./conjur/client/.netrc:/root/.netrc:ro
+      - ./conjur/policies:/policies:ro
+      - ./certs/ca/ca.crt:/usr/local/share/ca-certificates/ca.crt:ro
+    entrypoint: sleep
+    command: infinity
+
+  ansible-base:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.base
+      args:
+        - http_proxy
+        - https_proxy
+    image: ansible-base
+    command: /bin/true
+
+  ansible-master:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.ansible-master
+      args:
+        - http_proxy
+        - https_proxy
+    image: ansible-master
+    container_name: ansible-master
+    hostname: ansible-master
+    depends_on:
+      - ansible-base
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "2222:22"
+    volumes:
+      - ./master/ansible:/opt/ansible-lab
+
+  ansible-target1:
+    image: ansible-base
+    container_name: ansible-target1
+    hostname: ansible-target1
+    depends_on:
+      - ansible-base
+    networks:
+      - backend
+    environment:
+      - http_proxy
+      - https_proxy
+
+  ansible-target2:
+    image: ansible-base
+    container_name: ansible-target2
+    hostname: ansible-target2
+    depends_on:
+      - ansible-base
+    networks:
+      - backend
+    environment:
+      - http_proxy
+      - https_proxy
+
+  ansible-target3:
+    image: ansible-base
+    container_name: ansible-target3
+    hostname: ansible-target3
+    depends_on:
+      - ansible-base
+    networks:
+      - backend
+    environment:
+      - http_proxy
+      - https_proxy
+
+  ansible-ara:
+    image: quay.io/recordsansible/ara-api:latest
+    environment:
+      - ARA_SETTINGS=/root/settings.yaml
+      - ARA_ALLOWED_HOSTS=[ "127.0.0.1", "localhost", "ansible-ara" ]
+    container_name: ansible-ara
+    networks:
+      - frontend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ara/settings.yaml:/root/settings.yaml:ro
+      - ansible-ara-vol:/opt/ara
+
+volumes:
+  conjur-database-vol:
+  conjur-client-vol:
+  ansible-ara-vol:
+
+networks:
+  frontend:
+  backend:
+  conjur-fe:
+  conjur-be:

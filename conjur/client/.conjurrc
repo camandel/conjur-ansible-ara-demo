@@ -1,0 +1,5 @@
+---
+account: demo
+plugins: []
+appliance_url: https://conjur-proxy
+cert_file: "/usr/local/share/ca-certificates/ca.crt"

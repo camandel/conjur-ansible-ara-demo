@@ -1,0 +1,6 @@
+admin.out
+master.out
+master/master.identity
+conjur/client/.netrc
+certs/ca/*
+certs/servers/*

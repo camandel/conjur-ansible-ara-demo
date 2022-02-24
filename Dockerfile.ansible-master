@@ -1,0 +1,19 @@
+FROM ansible-base:latest
+
+RUN dnf install -y openssh-clients sshpass && yum clean all && rm -rf /var/cache/yum
+
+COPY master/ansible /opt/ansible-lab/
+COPY master/config /root/.ssh/
+COPY master/ara.sh /etc/profile.d
+COPY master/conjur.conf /etc
+
+RUN pip3 install pip --upgrade && pip3 install pbr && pip3 install ara && pip3 install ansible==2.9
+RUN ansible-galaxy collection install cyberark.conjur
+
+COPY certs/ca/ca.crt /etc/pki/ca-trust/source/anchors
+RUN update-ca-trust
+RUN echo ansiblelab | passwd --stdin root
+
+WORKDIR /opt/ansible-lab
+
+EXPOSE 22
