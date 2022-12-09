@@ -14,7 +14,7 @@ To better simulate the real target environment the demo has the following featur
 
 ## Requirementes
 - docker
-- docker-compose
+- docker-compose-plugin
 
 ## Infrastructure
 Conjur:
@@ -63,16 +63,16 @@ Simulate password rotation and re-run the playbook:
 $ ./password-rotation.sh
 $ ./run-playbook.sh
 ```
-Once the environment has been configured (do it **only** the first time) it can be managed with `docker-compose` command:
+Once the environment has been configured (do it **only** the first time) it can be managed with `docker compose` command:
 ```
-$ docker-compose [stop/start/restart]
+$ docker compose [stop/start/restart]
 ```
 ## Examples
 Every container can be accessed with `docker exec` command but **ansible-master** and **ansible-ara** have also ports exposed on your host.
 
 Open a terminal to connect to ansible-master (password is `ansiblelab`):
 ```
-$ ssh root@localhost -p 2222 
+$ ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 root@localhost 
 root@ansible-master ~]# cd /opt/ansible-lab/
 [root@ansible-master ansible-lab]# ansible-playbook -i inventory ping.yml
 <...>
@@ -87,22 +87,22 @@ http://localhost:8000
 ### New certificates
 If certificates have been updated you need to update some images and configuration files:
 ```
-$./generate-certs.sh
-$ docker-compose up -d --build ansible-master
+$ ./generate-certs.sh
+$ DOCKER_BUILDKIT=0 docker compose up -d --build ansible-master
 $ ./setup-ansible.sh
 $ ./setup-conjur.sh
-$ docker-compose restart conjur-proxy conjur-client ansible-master
+$ docker compose restart conjur-proxy conjur-client ansible-master
 ```
 ### Error 502 Bad Gateway
 Sometimes during conjur restarts it doesn't automatically delete the pid file:
 ```
-$ docker-compose exec conjur-server /opt/conjur-server/tmp/pids/server.pid
-$ docker-compose restart conjur-server 
+$ docker compose exec conjur-server /opt/conjur-server/tmp/pids/server.pid
+$ docker compose restart conjur-server 
 
 ```
 ## Clean-up
 To clean-up the whole environment (volumes included) run these commands:
 ```
-$ docker-compose down --volume
+$ docker compose down --volumes
 $ rm admin.out master.out
 ```
